@@ -28,9 +28,9 @@ Lottery Hub 是一个专为 NAS（如飞牛、群晖、极空间）设计的 Doc
 
 ### 2. 执行部署（SSH终端）：
 
-cd /path/to/lottery  # 进入你的目录
-docker-compose down  # 停止旧的
-docker-compose up -d --build # 重新构建并启动
+### cd /path/to/lottery  # 进入你的目录
+### docker compose down  # 停止旧的
+### docker compose up -d --build # 重新构建并启动
 等待数据初始化： 容器启动后，init_db 会自动删除旧的数据库文件，然后开始重新下载所有历史数据。这个过程大约需要 10-30 秒。 你可以通过 docker logs -f lottery_helper 查看进度，直到出现 ✅ dlt 更新 xxx 条 字样。
 
 ### 3.访问使用：
@@ -67,4 +67,5 @@ PC/手机：访问 http://NAS_IP:5088。
 点击红色按钮：查询该号码在历史上所有期数中中过多少次大奖（大数据遍历）。
 
 结果展示：中奖的红球/蓝球会高亮显示，下方会列出具体的奖级（如“三等奖 x1注”）和总奖金。
+
 
