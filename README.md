@@ -26,25 +26,46 @@ Lottery Hub 是一个专为 NAS（如飞牛、群晖、极空间）设计的 Doc
 ### 1. 准备目录
 在你的 NAS 上创建一个文件夹（例如 `/docker/lottery`），并确保其中包含一个空的 `data` 子文件夹。上传文件： 将上述 5 个文件（app.py, templates/index.html, docker-compose.yml, Dockerfile, requirements.txt）上传到 NAS 的 lottery 文件夹中。
 
-### 2. 获取代码
-你可以直接下载本项目，或者复制 `docker-compose.yml`。
+### 2. 执行部署（SSH终端）：
 
-### 3. 启动容器
-```yaml
-version: '3'
-services:
-  lottery-web:
-    image: [你的DockerHub用户名]/lottery-hub:latest
-    # 或者使用 build: . 本地构建
-    container_name: lottery_helper
-    restart: always
-    ports:
-      - "5088:5088"
-    dns:
-      - 223.5.5.5
-      - 114.114.114.114
-    mem_limit: 200m
-    volumes:
-      - ./data:/app/data
-    environment:
-      - TZ=Asia/Shanghai
+cd /path/to/lottery  # 进入你的目录
+docker-compose down  # 停止旧的
+docker-compose up -d --build # 重新构建并启动
+等待数据初始化： 容器启动后，init_db 会自动删除旧的数据库文件，然后开始重新下载所有历史数据。这个过程大约需要 10-30 秒。 你可以通过 docker logs -f lottery_helper 查看进度，直到出现 ✅ dlt 更新 xxx 条 字样。
+
+### 3.访问使用：
+
+PC/手机：访问 http://NAS_IP:5088。
+
+飞牛 NAS：在 Docker 列表中点击容器旁边的“打开”按钮即可直达。
+
+### 4.用户操作手册
+1、首页看板：
+
+顶部有两个显眼的倒计时，左边是停止销售时间，右边是开奖时间。
+
+倒计时精确到秒，当时间截止时会变为灰色“已结束”。
+
+2、查看历史：
+
+点击“双色球/大乐透/七星彩”标签切换彩种。
+
+点击“年份”下拉框，选择如 2018年，列表将只显示当年的数据。
+
+点击列表中的某一行，可以展开查看详细的奖金注数和金额。
+
+3、中奖查询：
+
+在下方输入框输入号码（支持多行粘贴，支持复式）。
+
+双色球：01 02 03 04 05 06 + 01
+
+大乐透：05 06 07 08 09 + 01 02
+
+点击蓝色按钮：查询该号码在“最新一期”（或下拉框选定的一期）是否中奖。
+
+点击红色按钮：查询该号码在历史上所有期数中中过多少次大奖（大数据遍历）。
+
+结果展示：中奖的红球/蓝球会高亮显示，下方会列出具体的奖级（如“三等奖 x1注”）和总奖金。
+
+
