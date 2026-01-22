@@ -5,22 +5,21 @@ services:
     image: lottery-web:latest
     container_name: lottery_helper
     restart: always
-    
-    # 1. 【核心修改】移除 network_mode: host，改用端口映射
-    # 这样 NAS 就能识别到 5088 端口，从而显示“快捷访问/WebUI”按钮
+    # 使用 Bridge + 端口映射 (为了快捷访问图标)
     ports:
       - "5088:5088"
-    
-    # 2. 【核心修改】手动指定 DNS
-    # 在 Bridge 模式下，必须指定 DNS 才能确保容器能访问外网下载彩票数据
+    # 必须指定 DNS，否则 Bridge 模式下可能无法下载数据
     dns:
-      - 223.5.5.5       # 阿里 DNS
-      - 114.114.114.114 # 114 DNS
-    
-    # 内存限制
+      - 223.5.5.5
+      - 114.114.114.114
+    # 内存限制 200MB
     mem_limit: 200m
-    
     volumes:
       - ./data:/app/data
     environment:
+      # 必须设置时区，否则定时任务时间会错乱
       - TZ=Asia/Shanghai
+    # NAS 面板识别标签
+    labels:
+      - "net.unraid.docker.webui=http://[IP]:5088"
+      - "org.opencontainers.image.title=彩票助手"
