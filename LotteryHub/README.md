@@ -24,27 +24,18 @@ Lottery Hub 是一个专为 NAS（如飞牛、群晖、极空间）设计的 Doc
 ## 🚀 快速部署 (Docker Compose)
 
 ### 1. 准备目录
-在你的 NAS 上创建一个文件夹（例如 `/docker/lottery`），并确保其中包含一个空的 `data` 子文件夹。
+在你的 NAS 上创建一个文件夹（例如 `/docker/lottery`），并确保其中包含一个空的 `data` 子文件夹。上传文件： 将上述 5 个文件（app.py, templates/index.html, docker-compose.yml, Dockerfile, requirements.txt）上传到 NAS 的 lottery 文件夹中。
 
-### 2. 获取代码
-你可以直接下载本项目，或者复制 `docker-compose.yml`。
+### 2. 执行部署（SSH终端）：
 
-### 3. 启动容器
-```yaml
-version: '3'
-services:
-  lottery-web:
-    image: [你的DockerHub用户名]/lottery-hub:latest
-    # 或者使用 build: . 本地构建
-    container_name: lottery_helper
-    restart: always
-    ports:
-      - "5088:5088"
-    dns:
-      - 223.5.5.5
-      - 114.114.114.114
-    mem_limit: 200m
-    volumes:
-      - ./data:/app/data
-    environment:
-      - TZ=Asia/Shanghai
+Bash
+cd /path/to/lottery  # 进入你的目录
+docker-compose down  # 停止旧的
+docker-compose up -d --build # 重新构建并启动
+等待数据初始化： 容器启动后，init_db 会自动删除旧的数据库文件，然后开始重新下载所有历史数据。这个过程大约需要 10-30 秒。 你可以通过 docker logs -f lottery_helper 查看进度，直到出现 ✅ dlt 更新 xxx 条 字样。
+
+访问使用：
+
+PC/手机：访问 http://NAS_IP:5088。
+
+飞牛 NAS：在 Docker 列表中点击容器旁边的“打开”按钮即可直达。
