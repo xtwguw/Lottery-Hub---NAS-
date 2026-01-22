@@ -24,7 +24,7 @@ Lottery Hub 是一个专为 NAS（如飞牛、群晖、极空间）设计的 Doc
 ## 🚀 快速部署 (Docker Compose)
 
 ### 1. 准备目录
-在你的 NAS 上创建一个文件夹（例如 `/docker/lottery`），并确保其中包含一个空的 `data` 子文件夹。
+在你的 NAS 上创建一个文件夹（例如 `/docker/lottery`），并确保其中包含一个空的 `data` 子文件夹。上传文件： 将上述 5 个文件（app.py, templates/index.html, docker-compose.yml, Dockerfile, requirements.txt）上传到 NAS 的 lottery 文件夹中。
 
 ### 2. 获取代码
 你可以直接下载本项目，或者复制 `docker-compose.yml`。
