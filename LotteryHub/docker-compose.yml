@@ -1,0 +1,26 @@
+version: '3'
+services:
+  lottery-web:
+    build: .
+    image: lottery-web:latest
+    container_name: lottery_helper
+    restart: always
+    
+    # 1. 【核心修改】移除 network_mode: host，改用端口映射
+    # 这样 NAS 就能识别到 5088 端口，从而显示“快捷访问/WebUI”按钮
+    ports:
+      - "5088:5088"
+    
+    # 2. 【核心修改】手动指定 DNS
+    # 在 Bridge 模式下，必须指定 DNS 才能确保容器能访问外网下载彩票数据
+    dns:
+      - 223.5.5.5       # 阿里 DNS
+      - 114.114.114.114 # 114 DNS
+    
+    # 内存限制
+    mem_limit: 200m
+    
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Shanghai

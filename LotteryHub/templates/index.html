@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>彩票数据中心</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        .header-bar { background: #2c3e50; color: white; padding: 15px; text-align: center; margin-bottom: 20px; }
+        
+        .ball { 
+            display: inline-block; width: 28px; height: 28px; line-height: 28px; 
+            text-align: center; border-radius: 50%; margin: 2px; 
+            font-weight: bold; font-size: 13px; 
+        }
+        
+        .b-red { background-color: #e74c3c; color: white; }
+        .b-blue { background-color: #3498db; color: white; }
+        .b-miss { background-color: #f1f3f5; color: #adb5bd; border: 1px solid #dee2e6; }
+
+        .history-box { max-height: 600px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        #error-log { display: none; background: #ffebee; color: #c62828; padding: 10px; border: 1px solid #ef9a9a; margin: 10px; border-radius: 4px; font-size: 12px; }
+
+        .filter-select { font-size: 0.85rem; padding: 0.25rem 0.5rem; width: auto; display: inline-block; min-width: 100px; }
+    </style>
+</head>
+<body>
+
+<div class="header-bar">
+    <h4 class="m-0">全量彩票数据查询</h4>
+    <div id="clock" class="small mt-2" style="opacity: 0.8;">加载时间...</div>
+</div>
+
+<div class="container">
+    <div id="error-log"></div>
+
+    <ul class="nav nav-pills nav-fill mb-3 bg-white rounded p-2 shadow-sm">
+        <li class="nav-item"><button id="tab-ssq" class="nav-link active" onclick="loadTab('ssq')">双色球</button></li>
+        <li class="nav-item"><button id="tab-dlt" class="nav-link" onclick="loadTab('dlt')">大乐透</button></li>
+        <li class="nav-item"><button id="tab-7xc" class="nav-link" onclick="loadTab('7xc')">七星彩</button></li>
+    </ul>
+
+    <div class="row g-2 mb-3">
+        <div class="col-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-3">
+                    <div class="text-muted small mb-1">🛑 购票截止</div>
+                    <div id="stop-date" class="fw-bold text-dark small">--</div>
+                    <div id="cd-stop" class="badge bg-secondary fw-normal mt-1">--</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-3">
+                    <div class="text-muted small mb-1">🎉 开奖时间</div>
+                    <div id="draw-date" class="fw-bold text-dark small">--</div>
+                    <div id="cd-draw" class="badge bg-danger fw-normal mt-1">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-header bg-white fw-bold border-bottom-0 d-flex justify-content-between align-items-center flex-wrap">
+            <span>历史开奖</span>
+            <div class="d-flex gap-2 mt-2 mt-md-0">
+                <select id="filter-year" class="form-select filter-select bg-light" onchange="applyFilters()">
+                    <option value="all">加载中...</option>
+                </select>
+                <select id="filter-issue" class="form-select filter-select bg-light" onchange="applyFilters(true)">
+                    <option value="all">所有期数</option>
+                </select>
+            </div>
+        </div>
+        <div class="history-box p-0">
+            <div class="accordion accordion-flush" id="history-list">
+                <div class="p-3 text-center text-muted" id="loading-tip">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    正在连接数据库...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-5">
+        <div class="card-header bg-white fw-bold border-bottom-0">中奖查询 (自动标红)</div>
+        <div class="card-body">
+            <div class="row g-2 mb-3">
+                <div class="col-7">
+                    <select class="form-select" id="issue-sel">
+                        <option value="latest">最新一期</option>
+                    </select>
+                </div>
+                <div class="col-5" id="dlt-opt" style="display:none;">
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="zj-chk">
+                        <label class="form-check-label small">追加投注</label>
+                    </div>
+                </div>
+            </div>
+            
+            <textarea class="form-control mb-3" id="bet-nums" rows="3" placeholder="输入号码 (支持复式)&#10;红球 蓝球 (空格分隔)&#10;例如: 01 02 03 04 05 06 + 01"></textarea>
+            
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary" onclick="doCheck('current')">查询选中期</button>
+                <button class="btn btn-outline-danger" onclick="doCheck('history')">遍历所有历史 (大数据)</button>
+            </div>
+        </div>
+        <div id="check-results" class="card-footer bg-white border-top-0"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function showError(msg) {
+        const el = document.getElementById('error-log');
+        el.style.display = 'block';
+        el.innerText = "JS错误: " + msg;
+    }
+
+    let currentType = 'ssq';
+    let globalData = null;
+    let currentHistoryList = []; 
+    let timerInt; // 全局定时器
+
+    setInterval(() => {
+        document.getElementById('clock').innerText = new Date().toLocaleString('zh-CN', {hour12: false});
+    }, 1000);
+
+    window.onload = function() {
+        fetch('/api/init')
+            .then(res => {
+                if (!res.ok) throw new Error("API响应异常: " + res.status);
+                return res.json();
+            })
+            .then(data => {
+                globalData = data;
+                loadTab('ssq'); 
+            })
+            .catch(err => {
+                showError("数据加载失败: " + err.message);
+                document.getElementById('loading-tip').innerText = "加载失败，请刷新重试";
+            });
+    };
+
+    function loadTab(type) {
+        currentType = type;
+        document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active', 'bg-primary'));
+        const activeBtn = document.getElementById('tab-' + type);
+        if(activeBtn) activeBtn.classList.add('active', 'bg-primary');
+        
+        if (!globalData || !globalData[type]) return;
+
+        const d = globalData[type];
+        
+        // 启动两个倒计时
+        startDualTimer(d.next_stop, d.next_draw);
+        
+        const sel = document.getElementById('issue-sel');
+        sel.innerHTML = `<option value="latest">最新一期</option>` + 
+                        d.issues.map(i => `<option value="${i.issue}">${i.issue}期 (${i.date})</option>`).join('');
+        
+        document.getElementById('dlt-opt').style.display = (type === 'dlt') ? 'block' : 'none';
+
+        currentHistoryList = d.history;
+        initFilters();
+        applyFilters(); 
+    }
+
+    function initFilters() {
+        const yearSel = document.getElementById('filter-year');
+        const issueSel = document.getElementById('filter-issue');
+        const years = new Set();
+        if (currentHistoryList && currentHistoryList.length > 0) {
+            currentHistoryList.forEach(item => {
+                if (item.date && item.date.length >= 4) {
+                    const y = item.date.substring(0, 4);
+                    if (!isNaN(y)) years.add(y);
+                }
+            });
+        }
+        const sortedYears = Array.from(years).sort((a, b) => Number(b) - Number(a));
+        let yearHtml = '<option value="all">所有年份</option>';
+        if (sortedYears.length > 0) {
+            sortedYears.forEach(y => { yearHtml += `<option value="${y}">${y}年</option>`; });
+        } else {
+            yearHtml += '<option disabled>暂无数据</option>';
+        }
+        yearSel.innerHTML = yearHtml;
+        issueSel.innerHTML = '<option value="all">所有期数</option>';
+    }
+
+    function applyFilters(isIssueChange = false) {
+        const yearVal = document.getElementById('filter-year').value;
+        const issueVal = document.getElementById('filter-issue').value;
+        const issueSel = document.getElementById('filter-issue');
+        const listDiv = document.getElementById('history-list');
+
+        let filtered = currentHistoryList;
+        if (yearVal !== 'all') {
+            filtered = filtered.filter(item => item.date.startsWith(yearVal));
+            if (!isIssueChange) {
+                let issueHtml = '<option value="all">全年所有期</option>';
+                filtered.forEach(item => { issueHtml += `<option value="${item.issue}">${item.issue}期</option>`; });
+                issueSel.innerHTML = issueHtml;
+            }
+        } else {
+            if (!isIssueChange) issueSel.innerHTML = '<option value="all">请先选年份</option>';
+        }
+        if (issueVal !== 'all') filtered = filtered.filter(item => item.issue === issueVal);
+
+        if (filtered.length === 0) {
+            listDiv.innerHTML = '<div class="p-3 text-center text-muted">未找到符合条件的数据</div>';
+            return;
+        }
+        renderHistoryList(filtered);
+    }
+
+    function renderHistoryList(data) {
+        const listDiv = document.getElementById('history-list');
+        const limit = (document.getElementById('filter-year').value === 'all') ? 50 : 1000;
+        const displayData = data.slice(0, limit);
+
+        listDiv.innerHTML = displayData.map((row, idx) => {
+            const rArr = row.red.split(' ');
+            const bArr = row.blue ? row.blue.split(' ') : [];
+            const ballHtml = rArr.map(n => `<span class="ball b-red">${n}</span>`).join('') + 
+                             bArr.map(n => `<span class="ball b-blue">${n}</span>`).join('');
+            
+            let prizeTab = '';
+            try {
+                const ps = JSON.parse(row.prizes);
+                if (ps && ps.length > 0) {
+                    prizeTab = `<table class="table table-sm table-bordered text-center small mb-0 mt-2">
+                        <thead class="table-light"><tr><th>奖项</th><th>注数</th><th>奖金</th></tr></thead>
+                        <tbody>` + 
+                        ps.map(p => `<tr><td>${p.n}</td><td>${p.c}</td><td class="text-danger fw-bold">${p.m}</td></tr>`).join('') +
+                        `</tbody></table>`;
+                }
+            } catch(e) {}
+
+            return `
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#c-${row.issue}">
+                        <div class="w-100">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>第 ${row.issue} 期</span>
+                                <span>${row.date}</span>
+                            </div>
+                            <div class="text-nowrap overflow-hidden">${ballHtml}</div>
+                        </div>
+                    </button>
+                </h2>
+                <div id="c-${row.issue}" class="accordion-collapse collapse" data-bs-parent="#history-list">
+                    <div class="accordion-body p-2 bg-light">
+                        ${prizeTab}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        if (data.length > limit) {
+            listDiv.innerHTML += '<div class="text-center p-2 small text-muted">仅显示最近50条，请选择年份查看历史数据</div>';
+        }
+    }
+
+    // --- 双重倒计时逻辑 ---
+    function startDualTimer(stopTimeStr, drawTimeStr) {
+        clearInterval(timerInt);
+        
+        const stopEl = document.getElementById('stop-date');
+        const drawEl = document.getElementById('draw-date');
+        const cdStop = document.getElementById('cd-stop');
+        const cdDraw = document.getElementById('cd-draw');
+        
+        stopEl.innerText = stopTimeStr.substring(5, 16); // 只显示 MM-DD HH:MM
+        drawEl.innerText = drawTimeStr.substring(5, 16);
+        
+        const targetStop = new Date(stopTimeStr).getTime();
+        const targetDraw = new Date(drawTimeStr).getTime();
+        
+        const calcTime = (target) => {
+            const now = new Date().getTime();
+            const diff = target - now;
+            if (diff < 0) return "已结束";
+            const d = Math.floor(diff / 86400000);
+            const h = Math.floor((diff % 86400000) / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            if(d>0) return `${d}天 ${h}时 ${m}分`;
+            return `${h}时 ${m}分 ${s}秒`;
+        };
+        
+        // 立即执行一次
+        cdStop.innerText = calcTime(targetStop);
+        cdDraw.innerText = calcTime(targetDraw);
+        
+        timerInt = setInterval(() => {
+            cdStop.innerText = calcTime(targetStop);
+            cdDraw.innerText = calcTime(targetDraw);
+            
+            // 样式优化：如果已结束，变灰色
+            cdStop.className = (cdStop.innerText === '已结束') ? "badge bg-secondary fw-normal mt-1" : "badge bg-success fw-normal mt-1";
+            cdDraw.className = (cdDraw.innerText === '已结束') ? "badge bg-secondary fw-normal mt-1" : "badge bg-danger fw-normal mt-1";
+        }, 1000);
+    }
+
+    function renderUserBalls(betStr, winData, type) {
+        let redPart = [], bluePart = [];
+        if (type === '7xc') {
+            redPart = betStr.replace(/[,，]/g, ' ').trim().split(/\s+/);
+        } else {
+            if (betStr.includes('+')) {
+                const p = betStr.split('+');
+                redPart = p[0].trim().replace(/[,，]/g, ' ').split(/\s+/);
+                bluePart = p[1].trim().replace(/[,，]/g, ' ').split(/\s+/);
+            } else {
+                const all = betStr.trim().replace(/[,，]/g, ' ').split(/\s+/);
+                if (type === 'ssq') { redPart = all.slice(0, all.length-1); bluePart = all.slice(all.length-1); }
+                else if (type === 'dlt') { redPart = all.slice(0, all.length-2); bluePart = all.slice(all.length-2); }
+            }
+        }
+        let html = '';
+        redPart.forEach(n => {
+            if (!n) return;
+            const isHit = winData.hit_red.includes(n);
+            const cls = isHit ? 'b-red' : 'b-miss'; 
+            html += `<span class="ball ${cls}">${n}</span>`;
+        });
+        if (bluePart.length > 0) {
+            html += `<span class="mx-1 text-muted">+</span>`;
+            bluePart.forEach(n => {
+                if (!n) return;
+                const isHit = winData.hit_blue.includes(n);
+                const cls = isHit ? 'b-blue' : 'b-miss'; 
+                html += `<span class="ball ${cls}">${n}</span>`;
+            });
+        }
+        return html;
+    }
+
+    async function doCheck(mode) {
+        const raw = document.getElementById('bet-nums').value.trim();
+        if (!raw) return alert("请输入号码");
+        const resDiv = document.getElementById('check-results');
+        resDiv.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div> 计算中...</div>';
+        const bets = raw.split('\n').map(s => ({nums: s})).filter(x => x.nums);
+        try {
+            const resp = await fetch('/api/check', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    type: currentType, mode: mode,
+                    issue: document.getElementById('issue-sel').value,
+                    zhuijia: document.getElementById('zj-chk').checked, bets: bets
+                })
+            });
+            const data = await resp.json();
+            if (data.length === 0) { resDiv.innerHTML = '<div class="alert alert-warning m-3">未查询到中奖信息</div>'; return; }
+            let html = '';
+            data.forEach(item => {
+                html += `<div class="p-3 border-bottom bg-white">`;
+                if (item.matches.length === 0) {
+                    html += `<div class="d-flex justify-content-between"><div class="fw-bold text-muted">${item.bet}</div><span class="badge bg-light text-secondary border align-self-center">未中奖</span></div>`;
+                } else {
+                    item.matches.forEach(m => {
+                        const winInfo = m.win_data;
+                        const highlightedBalls = renderUserBalls(item.bet, winInfo, currentType);
+                        let winStr = '';
+                        for(let k in winInfo.details) { winStr += `<span class="badge bg-danger me-1">${k} x${winInfo.details[k].count}</span> `; }
+                        html += `<div class="mt-2 p-2 rounded" style="background-color: #fff8e1; border: 1px solid #ffe0b2;"><div class="d-flex justify-content-between align-items-center mb-2"><span class="badge bg-secondary">${m.issue}期</span><span class="text-danger fw-bold fs-5">¥${winInfo.total_money.toLocaleString()}</span></div><div class="mb-2"><small class="text-muted d-block mb-1">您的号码 (高亮为命中):</small><div>${highlightedBalls}</div></div><div class="border-top pt-2 mt-2">${winStr}</div></div>`;
+                    });
+                }
+                html += `</div>`;
+            });
+            resDiv.innerHTML = html;
+        } catch (e) { resDiv.innerHTML = '<div class="text-danger p-3">查询出错: ' + e.message + '</div>'; }
+    }
+</script>
+</body>
+</html>
