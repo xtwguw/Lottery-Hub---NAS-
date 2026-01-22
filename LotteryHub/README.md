@@ -28,7 +28,6 @@ Lottery Hub 是一个专为 NAS（如飞牛、群晖、极空间）设计的 Doc
 
 ### 2. 执行部署（SSH终端）：
 
-Bash
 cd /path/to/lottery  # 进入你的目录
 docker-compose down  # 停止旧的
 docker-compose up -d --build # 重新构建并启动
@@ -39,3 +38,4 @@ docker-compose up -d --build # 重新构建并启动
 PC/手机：访问 http://NAS_IP:5088。
 
 飞牛 NAS：在 Docker 列表中点击容器旁边的“打开”按钮即可直达。
+
