@@ -5,21 +5,18 @@ services:
     image: lottery-web:latest
     container_name: lottery_helper
     restart: always
-    # 使用 Bridge + 端口映射 (为了快捷访问图标)
     ports:
       - "5088:5088"
-    # 必须指定 DNS，否则 Bridge 模式下可能无法下载数据
     dns:
       - 223.5.5.5
       - 114.114.114.114
-    # 内存限制 200MB
-    mem_limit: 200m
+    mem_limit: 1024m
     volumes:
       - ./data:/app/data
     environment:
-      # 必须设置时区，否则定时任务时间会错乱
       - TZ=Asia/Shanghai
-    # NAS 面板识别标签
-    labels:
-      - "net.unraid.docker.webui=http://[IP]:5088"
-      - "org.opencontainers.image.title=彩票助手"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
