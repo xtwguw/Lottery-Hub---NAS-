@@ -961,14 +961,14 @@ numpy
 
 Bash
 cd /volume1/docker/lottery  # 进入您的目录
-docker-compose down         # 停止容器
+docker compose down         # 停止容器
 docker image prune -a -f    # 清理旧镜像
 3.2 文件上传
 确保所有 5 个文件都已覆盖上传到 NAS 的 /lottery 文件夹中。 ⚠️ 重要：index.html 必须放在 templates 文件夹内。
 
 3.3 重新启动
 Bash
-docker-compose up -d --build
+sudo docker compose up -d --build
 等待几分钟，直到看到日志显示 ✅ DB Optimized (WAL Mode)。
 
 📖 第四部分：功能验证手册
