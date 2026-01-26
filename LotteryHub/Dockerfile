@@ -1,20 +1,17 @@
-FROM python:3.9-slim
+FROM python:3.9-slim-bullseye
+
+# 1. 换源并安装 Tesseract 和 OpenCV 的系统依赖 (libgl1, libglib2.0)
+RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
+    sed -i 's/security.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y tesseract-ocr libtesseract-dev libgl1 libglib2.0-0 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
-# 安装 OpenCV 和 OCR 系统依赖
-RUN apt-get update && apt-get install -y \
-    libgl1 \
-    libglib2.0-0 \
-    tesseract-ocr \
-    tesseract-ocr-eng \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-
+RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 EXPOSE 5088
-
-CMD ["gunicorn", "-w", "1", "--threads", "50", "-b", "0.0.0.0:5088", "--timeout", "60", "--access-logfile", "-", "app:app"]
+CMD ["gunicorn", "-w", "1", "--threads", "50", "-b", "0.0.0.0:5088", "--timeout", "120", "--access-logfile", "-", "app:app"]
