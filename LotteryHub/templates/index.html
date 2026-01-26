@@ -2,382 +2,428 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>彩票数据中心</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>全量彩票数据中心</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
     <style>
-        body { background: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-        .header-bar { background: #2c3e50; color: white; padding: 15px; text-align: center; margin-bottom: 20px; }
-        
-        .ball { 
-            display: inline-block; width: 28px; height: 28px; line-height: 28px; 
-            text-align: center; border-radius: 50%; margin: 2px; 
-            font-weight: bold; font-size: 13px; 
+        /* === 1. 配色系统 === */
+        :root {
+            --bg-body: #f4f6f9; --bg-card: #ffffff;
+            --text-main: #212529; --text-sub: #6c757d; --text-label: #495057;
+            --border-color: #dee2e6; --header-bg: #2c3e50; --header-text: #ffffff;
+            --input-bg: #ffffff; --ball-bg: #ffffff; --ball-text: #333333; --ball-border: #dee2e6;
+            --highlight-bg: #fff8e1; --highlight-border: #ffe0b2; --preview-bg: #ffffff;
+            --tab-active-bg: #0d6efd; --tab-active-text: #ffffff;
+            --table-head-bg: #f8f9fa;
         }
-        
-        .b-red { background-color: #e74c3c; color: white; }
-        .b-blue { background-color: #3498db; color: white; }
-        .b-miss { background-color: #f1f3f5; color: #adb5bd; border: 1px solid #dee2e6; }
+        [data-theme="dark"] {
+            --bg-body: #000000; --bg-card: #1c1c1e;
+            --text-main: #ffffff; --text-sub: #cfcfcf; --text-label: #e0e0e0;
+            --border-color: #38383a; --header-bg: #1c1c1e; --header-text: #ffffff;
+            --input-bg: #2c2c2e; --ball-bg: #2c2c2e; --ball-text: #ffffff; --ball-border: #48484a;
+            --highlight-bg: #3a3a3c; --highlight-border: #5a4020; --preview-bg: #2c2c2e;
+            --tab-active-bg: #0a84ff; --tab-active-text: #ffffff;
+            --table-head-bg: #2c2c2e;
+        }
 
-        .history-box { max-height: 600px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-        #error-log { display: none; background: #ffebee; color: #c62828; padding: 10px; border: 1px solid #ef9a9a; margin: 10px; border-radius: 4px; font-size: 12px; }
-
-        .filter-select { font-size: 0.85rem; padding: 0.25rem 0.5rem; width: auto; display: inline-block; min-width: 100px; }
+        body { background-color: var(--bg-body); color: var(--text-main); font-family: -apple-system, sans-serif; padding-bottom: 80px; transition: background 0.3s, color 0.3s; }
+        .header-bar { background: var(--header-bg); color: var(--header-text); padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card-header, .card-footer { background-color: var(--bg-card); border-bottom: 1px solid var(--border-color); border-top: 1px solid var(--border-color); color: var(--text-main); font-weight: bold; }
+        .form-control, .form-select { background-color: var(--input-bg); border-color: var(--border-color); color: var(--text-main); }
+        .form-control:focus, .form-select:focus { background-color: var(--input-bg); color: var(--text-main); border-color: #0d6efd; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
+        .nav-pills .nav-link { color: var(--text-sub); background: var(--bg-body); margin: 0 2px; }
+        .nav-pills .nav-link.active { background-color: var(--tab-active-bg); color: var(--tab-active-text); }
+        .ball { display: inline-flex; justify-content: center; align-items: center; width: 34px; height: 34px; border-radius: 50%; margin: 3px; font-weight: bold; font-size: 14px; cursor: pointer; border: 1px solid var(--ball-border); background: var(--ball-bg); color: var(--ball-text); transition: transform 0.1s; }
+        .ball:active { transform: scale(0.9); }
+        .ball.active-red { background-color: #e74c3c; color: white; border-color: #c0392b; }
+        .ball.active-blue { background-color: #3498db; color: white; border-color: #2980b9; }
+        .static-ball { display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 50%; margin: 1px; font-size: 12px; color: white; }
+        .sb-red { background: #e74c3c; } .sb-blue { background: #3498db; }
+        .picker-area { background: var(--bg-card); border-radius: 8px; padding: 15px; border: 1px solid var(--border-color); margin-bottom: 15px; }
+        .picker-header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .picker-title { font-size: 1.1rem; font-weight: bold; color: var(--text-main); margin-right: 10px; }
+        #draw-info-display { font-size: 0.9rem; color: var(--text-sub); display: flex; align-items: center; }
+        .picker-section-title { font-size: 13px; color: var(--text-sub); margin-bottom: 5px; font-weight: bold; }
+        .current-pick-display { font-family: monospace; color: #d63384; font-weight: bold; font-size: 1.1em; }
+        .qxc-row { display: flex; align-items: center; border-bottom: 1px solid var(--border-color); padding: 5px 0; }
+        .qxc-label { width: 50px; font-size: 13px; color: var(--text-label); font-weight: bold; }
+        .qxc-balls { flex: 1; display: flex; flex-wrap: wrap; gap: 2px; }
+        #ocr-preview-container { border: 2px dashed var(--border-color); border-radius: 8px; padding: 10px; background: var(--preview-bg); height: 100%; min-height: 220px; display: flex; align-items: center; justify-content: center; position: relative; flex-direction: column; }
+        #ocr-preview-img { max-width: 100%; max-height: 350px; border-radius: 4px; display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+        #clear-img-btn { position: absolute; top: 10px; right: 10px; z-index: 20; background: rgba(255,255,255,0.8); }
+        .placeholder-text { color: var(--text-sub); font-size: 0.9rem; text-align: center; }
+        .theme-switch-wrapper { display: flex; align-items: center; gap: 8px; }
+        .theme-switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+        .theme-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #0d6efd; }
+        input:checked + .slider:before { transform: translateX(18px); }
+        .history-box { height: 400px; overflow-y: auto; }
+        .ocr-btn-group { position: absolute; right: 10px; top: 10px; z-index: 10; display: flex; gap: 8px; }
+        .ocr-btn { opacity: 0.9; width: 36px; height: 36px; padding: 0; line-height: 34px; }
+        [data-theme="dark"] .text-secondary { color: #b0b0b0 !important; }
+        .result-draw-balls { margin-top: 5px; padding-top: 5px; border-top: 1px dashed rgba(0,0,0,0.1); }
+        [data-theme="dark"] .result-draw-balls { border-top-color: rgba(255,255,255,0.1); }
+        .result-draw-balls .static-ball { width: 22px; height: 22px; line-height: 22px; font-size: 11px; }
+        .mini-ball { display: inline-block; width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 50%; margin: 0 1px; font-size: 11px; color: white; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="header-bar">
-    <h4 class="m-0">全量彩票数据查询</h4>
-    <div id="clock" class="small mt-2" style="opacity: 0.8;">加载时间...</div>
+    <div style="width: 70px;"></div>
+    <div class="text-center">
+        <h5 class="m-0 fw-bold">全量彩票数据中心</h5>
+        <div id="clock" class="small mt-1 opacity-75" style="font-size: 0.75rem;">Loading...</div>
+    </div>
+    <div class="theme-switch-wrapper">
+        <span id="theme-icon" style="font-size:1.2rem;">🌞</span>
+        <label class="theme-switch">
+            <input type="checkbox" id="checkbox" onchange="toggleTheme(this.checked)">
+            <div class="slider"></div>
+        </label>
+    </div>
 </div>
 
 <div class="container">
-    <div id="error-log"></div>
-
-    <ul class="nav nav-pills nav-fill mb-3 bg-white rounded p-2 shadow-sm">
+    <ul class="nav nav-pills nav-fill mb-4 p-1 shadow-sm rounded" style="background-color: var(--bg-card); border: 1px solid var(--border-color);">
         <li class="nav-item"><button id="tab-ssq" class="nav-link active" onclick="loadTab('ssq')">双色球</button></li>
         <li class="nav-item"><button id="tab-dlt" class="nav-link" onclick="loadTab('dlt')">大乐透</button></li>
         <li class="nav-item"><button id="tab-7xc" class="nav-link" onclick="loadTab('7xc')">七星彩</button></li>
     </ul>
 
-    <div class="row g-2 mb-3">
-        <div class="col-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-3">
-                    <div class="text-muted small mb-1">🛑 购票截止</div>
-                    <div id="stop-date" class="fw-bold text-dark small">--</div>
-                    <div id="cd-stop" class="badge bg-secondary fw-normal mt-1">--</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-3">
-                    <div class="text-muted small mb-1">🎉 开奖时间</div>
-                    <div id="draw-date" class="fw-bold text-dark small">--</div>
-                    <div id="cd-draw" class="badge bg-danger fw-normal mt-1">--</div>
-                </div>
-            </div>
-        </div>
+    <div class="row g-3 mb-4">
+        <div class="col-6"><div class="card h-100"><div class="card-body text-center py-2"><div class="small fw-bold text-secondary">🛑 截止时间</div><div id="cd-stop" class="badge bg-secondary mt-1">--</div></div></div></div>
+        <div class="col-6"><div class="card h-100"><div class="card-body text-center py-2"><div class="small fw-bold text-secondary">🎉 开奖时间</div><div id="cd-draw" class="badge bg-danger mt-1">--</div></div></div></div>
     </div>
 
-    <div class="card mb-4 border-0 shadow-sm">
-        <div class="card-header bg-white fw-bold border-bottom-0 d-flex justify-content-between align-items-center flex-wrap">
-            <span>历史开奖</span>
-            <div class="d-flex gap-2 mt-2 mt-md-0">
-                <select id="filter-year" class="form-select filter-select bg-light" onchange="applyFilters()">
-                    <option value="all">加载中...</option>
-                </select>
-                <select id="filter-issue" class="form-select filter-select bg-light" onchange="applyFilters(true)">
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center pt-3">
+            <span><i class="bi bi-clock-history"></i> 历史开奖</span>
+            <div class="d-flex gap-1">
+                <select id="filter-year" class="form-select form-select-sm" style="width:auto; min-width:80px;" onchange="resetAndLoadHistory(this.value)"></select>
+                <select id="filter-history-issue" class="form-select form-select-sm" style="width:auto; min-width:90px;" onchange="filterHistoryByIssue(this.value)">
                     <option value="all">所有期数</option>
                 </select>
             </div>
         </div>
-        <div class="history-box p-0">
-            <div class="accordion accordion-flush" id="history-list">
-                <div class="p-3 text-center text-muted" id="loading-tip">
-                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                    正在连接数据库...
-                </div>
-            </div>
+        <div class="history-box p-0" id="history-box">
+            <div id="history-list" class="accordion accordion-flush"></div>
+            <div id="history-loading" class="text-center p-3 small text-muted" style="display:none">加载更多...</div>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm mb-5">
-        <div class="card-header bg-white fw-bold border-bottom-0">中奖查询 (自动标红)</div>
+    <div class="card mb-5">
+        <div class="card-header d-flex justify-content-between align-items-center pt-3">
+            <span><i class="bi bi-calculator"></i> 选号查询</span>
+            <div id="dlt-opt" style="display:none;" class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" id="zj-chk"><label class="form-check-label small">追加</label></div>
+        </div>
         <div class="card-body">
-            <div class="row g-2 mb-3">
-                <div class="col-7">
-                    <select class="form-select" id="issue-sel">
-                        <option value="latest">最新一期</option>
-                    </select>
+            <div class="row g-4">
+                <div class="col-lg-7 col-12">
+                    <div class="mb-3"><select class="form-select" id="issue-sel" onchange="updateDrawDisplay()"><option value="latest">核对最新一期</option></select></div>
+                    
+                    <div class="picker-area">
+                        <div class="picker-header-row">
+                            <div id="picker-title-container"></div>
+                            <div id="draw-info-display"></div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom" style="border-color:var(--border-color)!important;">
+                            <span class="small text-secondary">暂存: <span id="current-pick-text" class="current-pick-display ms-2"></span></span>
+                            <button class="btn btn-sm btn-success rounded-pill px-3" onclick="addCurrentPickToList()"><i class="bi bi-plus-lg"></i> 下一组</button>
+                        </div>
+                        <div id="number-picker"></div>
+                    </div>
+
+                    <div class="position-relative mb-3">
+                        <textarea class="form-control shadow-none" id="bet-nums" rows="6" placeholder="号码列表 (每行一组)" oninput="syncPickerFromText()"></textarea>
+                        <div class="ocr-btn-group">
+                            <input type="file" id="file-input" accept="image/*" hidden onchange="initCrop(this)">
+                            <button class="btn btn-light border ocr-btn shadow-sm text-primary" onclick="document.getElementById('file-input').click()"><i class="bi bi-image"></i></button>
+                            <input type="file" id="camera-input" accept="image/*" capture="environment" hidden onchange="initCrop(this)">
+                            <button class="btn btn-light border ocr-btn shadow-sm" onclick="document.getElementById('camera-input').click()"><i class="bi bi-camera-fill"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary flex-fill" onclick="clearAll()">清空</button>
+                        <button class="btn btn-primary flex-fill" onclick="doCheck('current')">查询选中期</button>
+                        <button class="btn btn-outline-danger flex-fill" onclick="doCheck('history')">扫历史</button>
+                    </div>
                 </div>
-                <div class="col-5" id="dlt-opt" style="display:none;">
-                    <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="zj-chk">
-                        <label class="form-check-label small">追加投注</label>
+                
+                <div class="col-lg-5 col-12">
+                    <div id="ocr-preview-container">
+                        <button type="button" class="btn-close" id="clear-img-btn" aria-label="Close" onclick="clearImagePreview()" title="移除图片"></button>
+                        <div id="ocr-placeholder" class="placeholder-text">
+                            <i class="bi bi-image" style="font-size: 3rem; opacity: 0.3;"></i><br>
+                            识别原图将显示在此处<br>方便对比修改
+                        </div>
+                        <img id="ocr-preview-img" src="" alt="OCR Preview">
                     </div>
                 </div>
             </div>
-            
-            <textarea class="form-control mb-3" id="bet-nums" rows="3" placeholder="输入号码 (支持复式)&#10;红球 蓝球 (空格分隔)&#10;例如: 01 02 03 04 05 06 + 01"></textarea>
-            
-            <div class="d-grid gap-2">
-                <button class="btn btn-primary" onclick="doCheck('current')">查询选中期</button>
-                <button class="btn btn-outline-danger" onclick="doCheck('history')">遍历所有历史 (大数据)</button>
-            </div>
         </div>
-        <div id="check-results" class="card-footer bg-white border-top-0"></div>
+        <div id="check-results" class="card-footer border-top-0"></div>
+    </div>
+</div>
+
+<div class="modal fade" id="cropModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow" style="background-color: var(--bg-card); color: var(--text-main);">
+            <div class="modal-header border-bottom py-2" style="border-color:var(--border-color)!important;"><h6 class="m-0 fw-bold">图片处理</h6><button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--text-main) == '#ffffff' ? invert(1) : none;"></button></div>
+            <div class="modal-body bg-black"><div style="height:60vh;background:#000;border-radius:8px;overflow:hidden"><img id="image-to-crop" src="" style="max-width:100%"></div><div class="mt-3 d-flex align-items-center gap-3"><i class="bi bi-arrow-counterclockwise fs-4 text-white" onclick="rotateImage(-90)"></i><input type="range" class="form-range flex-grow-1" min="-45" max="45" value="0" oninput="rotateImage(this.value, true)"><i class="bi bi-arrow-clockwise fs-4 text-white" onclick="rotateImage(90)"></i></div></div>
+            <div class="modal-footer border-top py-2" style="border-color:var(--border-color)!important;"><button id="crop-confirm-btn" class="btn btn-primary w-100" onclick="performCropAndUpload()">开始识别</button></div>
+        </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 <script>
-    function showError(msg) {
-        const el = document.getElementById('error-log');
-        el.style.display = 'block';
-        el.innerText = "JS错误: " + msg;
+    let currentType = 'ssq', globalData = null, timerInt;
+    let selectedBalls = { red: [], blue: [], qxc: [[],[],[],[],[],[],[]] }; 
+    let cropper = null, cropModal = null;
+    let historyState = { offset: 0, limit: 20, year: 'all', issue: 'all', isLoading: false, hasMore: true };
+    let allIssuesMap = {};
+
+    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString('zh-CN'); }, 1000);
+    
+    function initTheme() {
+        const hour = new Date().getHours();
+        const isNight = hour >= 18 || hour < 6;
+        const saved = localStorage.getItem('theme');
+        const isDark = saved === 'dark' || (!saved && isNight);
+        updateThemeUI(isDark);
+    }
+    function toggleTheme(isChecked) { updateThemeUI(isChecked); localStorage.setItem('theme', isChecked ? 'dark' : 'light'); }
+    function updateThemeUI(isDark) {
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        document.getElementById('checkbox').checked = isDark;
+        document.getElementById('theme-icon').innerText = isDark ? "🌙" : "🌞";
+        const closeBtns = document.querySelectorAll('.btn-close');
+        closeBtns.forEach(btn => btn.style.filter = isDark ? 'invert(1)' : 'none');
     }
 
-    let currentType = 'ssq';
-    let globalData = null;
-    let currentHistoryList = []; 
-    let timerInt; // 全局定时器
-
-    setInterval(() => {
-        document.getElementById('clock').innerText = new Date().toLocaleString('zh-CN', {hour12: false});
-    }, 1000);
-
     window.onload = function() {
-        fetch('/api/init')
-            .then(res => {
-                if (!res.ok) throw new Error("API响应异常: " + res.status);
-                return res.json();
-            })
-            .then(data => {
-                globalData = data;
-                loadTab('ssq'); 
-            })
-            .catch(err => {
-                showError("数据加载失败: " + err.message);
-                document.getElementById('loading-tip').innerText = "加载失败，请刷新重试";
+        initTheme();
+        if(document.getElementById('cropModal')) cropModal = new bootstrap.Modal(document.getElementById('cropModal'));
+        fetch('/api/init').then(r=>r.json()).then(d=>{ 
+            globalData=d; loadTab('ssq'); 
+            document.getElementById('history-box').addEventListener('scroll', (e) => {
+                if(e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 50) loadMoreHistory();
             });
+        }).catch(e=>console.error(e));
     };
 
     function loadTab(type) {
         currentType = type;
-        document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active', 'bg-primary'));
-        const activeBtn = document.getElementById('tab-' + type);
-        if(activeBtn) activeBtn.classList.add('active', 'bg-primary');
-        
+        document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + type).classList.add('active');
+        clearAll(); renderPicker(type);
         if (!globalData || !globalData[type]) return;
-
         const d = globalData[type];
-        
-        // 启动两个倒计时
         startDualTimer(d.next_stop, d.next_draw);
         
+        const ySel = document.getElementById('filter-year');
+        ySel.innerHTML = '<option value="all">所有年份</option>' + d.years.map(y=>`<option value="${y}">${y}年</option>`).join('');
+        ySel.value = 'all';
+        
+        allIssuesMap = {};
         const sel = document.getElementById('issue-sel');
-        sel.innerHTML = `<option value="latest">最新一期</option>` + 
-                        d.issues.map(i => `<option value="${i.issue}">${i.issue}期 (${i.date})</option>`).join('');
+        let issueOpts = `<option value="latest">核对最新一期</option>`;
+        d.all_issues.forEach(i => { allIssuesMap[i.issue] = i; issueOpts += `<option value="${i.issue}">第 ${i.issue} 期</option>`; });
+        sel.innerHTML = issueOpts;
+        if (d.all_issues.length > 0) allIssuesMap['latest'] = d.all_issues[0];
         
+        updateDrawDisplay();
+
         document.getElementById('dlt-opt').style.display = (type === 'dlt') ? 'block' : 'none';
-
-        currentHistoryList = d.history;
-        initFilters();
-        applyFilters(); 
+        resetAndLoadHistory('all');
     }
 
-    function initFilters() {
-        const yearSel = document.getElementById('filter-year');
-        const issueSel = document.getElementById('filter-issue');
-        const years = new Set();
-        if (currentHistoryList && currentHistoryList.length > 0) {
-            currentHistoryList.forEach(item => {
-                if (item.date && item.date.length >= 4) {
-                    const y = item.date.substring(0, 4);
-                    if (!isNaN(y)) years.add(y);
-                }
-            });
-        }
-        const sortedYears = Array.from(years).sort((a, b) => Number(b) - Number(a));
-        let yearHtml = '<option value="all">所有年份</option>';
-        if (sortedYears.length > 0) {
-            sortedYears.forEach(y => { yearHtml += `<option value="${y}">${y}年</option>`; });
-        } else {
-            yearHtml += '<option disabled>暂无数据</option>';
-        }
-        yearSel.innerHTML = yearHtml;
-        issueSel.innerHTML = '<option value="all">所有期数</option>';
+    function updateDrawDisplay() {
+        const val = document.getElementById('issue-sel').value;
+        const display = document.getElementById('draw-info-display');
+        const data = allIssuesMap[val];
+        
+        if (!data || !data.red) { display.innerHTML = '<span class="badge bg-secondary">待开奖</span>'; return; }
+        
+        const rArr = data.red.split(' '); 
+        const bArr = data.blue ? data.blue.split(' ') : [];
+        const balls = rArr.map(n=>`<span class="mini-ball sb-red">${n}</span>`).join('') + 
+                      bArr.map(n=>`<span class="mini-ball sb-blue">${n}</span>`).join('');
+        
+        const infoHtml = `<span class="me-2 small text-secondary">第 ${data.issue} 期 (${data.date})</span>`;
+        const labelHtml = `<span class="me-2 small fw-bold">开奖号码:</span>`;
+        
+        display.innerHTML = `${infoHtml}${labelHtml}${balls}`;
     }
 
-    function applyFilters(isIssueChange = false) {
-        const yearVal = document.getElementById('filter-year').value;
-        const issueVal = document.getElementById('filter-issue').value;
-        const issueSel = document.getElementById('filter-issue');
-        const listDiv = document.getElementById('history-list');
-
-        let filtered = currentHistoryList;
-        if (yearVal !== 'all') {
-            filtered = filtered.filter(item => item.date.startsWith(yearVal));
-            if (!isIssueChange) {
-                let issueHtml = '<option value="all">全年所有期</option>';
-                filtered.forEach(item => { issueHtml += `<option value="${item.issue}">${item.issue}期</option>`; });
-                issueSel.innerHTML = issueHtml;
-            }
-        } else {
-            if (!isIssueChange) issueSel.innerHTML = '<option value="all">请先选年份</option>';
-        }
-        if (issueVal !== 'all') filtered = filtered.filter(item => item.issue === issueVal);
-
-        if (filtered.length === 0) {
-            listDiv.innerHTML = '<div class="p-3 text-center text-muted">未找到符合条件的数据</div>';
-            return;
-        }
-        renderHistoryList(filtered);
-    }
-
-    function renderHistoryList(data) {
-        const listDiv = document.getElementById('history-list');
-        const limit = (document.getElementById('filter-year').value === 'all') ? 50 : 1000;
-        const displayData = data.slice(0, limit);
-
-        listDiv.innerHTML = displayData.map((row, idx) => {
-            const rArr = row.red.split(' ');
-            const bArr = row.blue ? row.blue.split(' ') : [];
-            const ballHtml = rArr.map(n => `<span class="ball b-red">${n}</span>`).join('') + 
-                             bArr.map(n => `<span class="ball b-blue">${n}</span>`).join('');
-            
-            let prizeTab = '';
-            try {
-                const ps = JSON.parse(row.prizes);
-                if (ps && ps.length > 0) {
-                    prizeTab = `<table class="table table-sm table-bordered text-center small mb-0 mt-2">
-                        <thead class="table-light"><tr><th>奖项</th><th>注数</th><th>奖金</th></tr></thead>
-                        <tbody>` + 
-                        ps.map(p => `<tr><td>${p.n}</td><td>${p.c}</td><td class="text-danger fw-bold">${p.m}</td></tr>`).join('') +
-                        `</tbody></table>`;
-                }
-            } catch(e) {}
-
-            return `
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#c-${row.issue}">
-                        <div class="w-100">
-                            <div class="d-flex justify-content-between small text-muted mb-1">
-                                <span>第 ${row.issue} 期</span>
-                                <span>${row.date}</span>
-                            </div>
-                            <div class="text-nowrap overflow-hidden">${ballHtml}</div>
-                        </div>
-                    </button>
-                </h2>
-                <div id="c-${row.issue}" class="accordion-collapse collapse" data-bs-parent="#history-list">
-                    <div class="accordion-body p-2 bg-light">
-                        ${prizeTab}
-                    </div>
-                </div>
-            </div>`;
-        }).join('');
-
-        if (data.length > limit) {
-            listDiv.innerHTML += '<div class="text-center p-2 small text-muted">仅显示最近50条，请选择年份查看历史数据</div>';
-        }
-    }
-
-    // --- 双重倒计时逻辑 ---
-    function startDualTimer(stopTimeStr, drawTimeStr) {
-        clearInterval(timerInt);
-        
-        const stopEl = document.getElementById('stop-date');
-        const drawEl = document.getElementById('draw-date');
-        const cdStop = document.getElementById('cd-stop');
-        const cdDraw = document.getElementById('cd-draw');
-        
-        stopEl.innerText = stopTimeStr.substring(5, 16); // 只显示 MM-DD HH:MM
-        drawEl.innerText = drawTimeStr.substring(5, 16);
-        
-        const targetStop = new Date(stopTimeStr).getTime();
-        const targetDraw = new Date(drawTimeStr).getTime();
-        
-        const calcTime = (target) => {
-            const now = new Date().getTime();
-            const diff = target - now;
-            if (diff < 0) return "已结束";
-            const d = Math.floor(diff / 86400000);
-            const h = Math.floor((diff % 86400000) / 3600000);
-            const m = Math.floor((diff % 3600000) / 60000);
-            const s = Math.floor((diff % 60000) / 1000);
-            if(d>0) return `${d}天 ${h}时 ${m}分`;
-            return `${h}时 ${m}分 ${s}秒`;
-        };
-        
-        // 立即执行一次
-        cdStop.innerText = calcTime(targetStop);
-        cdDraw.innerText = calcTime(targetDraw);
-        
-        timerInt = setInterval(() => {
-            cdStop.innerText = calcTime(targetStop);
-            cdDraw.innerText = calcTime(targetDraw);
-            
-            // 样式优化：如果已结束，变灰色
-            cdStop.className = (cdStop.innerText === '已结束') ? "badge bg-secondary fw-normal mt-1" : "badge bg-success fw-normal mt-1";
-            cdDraw.className = (cdDraw.innerText === '已结束') ? "badge bg-secondary fw-normal mt-1" : "badge bg-danger fw-normal mt-1";
-        }, 1000);
-    }
-
-    function renderUserBalls(betStr, winData, type) {
-        let redPart = [], bluePart = [];
+    function renderPicker(type) {
+        const container = document.getElementById('number-picker'); container.innerHTML = ''; document.getElementById('current-pick-text').innerText = ''; selectedBalls = { red: [], blue: [], qxc: [[],[],[],[],[],[],[]] };
+        let titleText = "";
+        if (type === 'ssq') titleText = "双色球选号"; else if (type === 'dlt') titleText = "大乐透选号"; else if (type === '7xc') titleText = "七星彩选号";
+        document.getElementById('picker-title-container').innerHTML = `<div class="picker-title">${titleText}</div>`;
         if (type === '7xc') {
-            redPart = betStr.replace(/[,，]/g, ' ').trim().split(/\s+/);
-        } else {
-            if (betStr.includes('+')) {
-                const p = betStr.split('+');
-                redPart = p[0].trim().replace(/[,，]/g, ' ').split(/\s+/);
-                bluePart = p[1].trim().replace(/[,，]/g, ' ').split(/\s+/);
-            } else {
-                const all = betStr.trim().replace(/[,，]/g, ' ').split(/\s+/);
-                if (type === 'ssq') { redPart = all.slice(0, all.length-1); bluePart = all.slice(all.length-1); }
-                else if (type === 'dlt') { redPart = all.slice(0, all.length-2); bluePart = all.slice(all.length-2); }
+            const posNames = ['一','二','三','四','五','六','七(末)'];
+            let html = '';
+            for(let i=0; i<7; i++) {
+                const maxNum = (i === 6) ? 14 : 9;
+                let ballsHtml = ''; for(let n=0; n<=maxNum; n++) ballsHtml += `<div class="ball" onclick="toggleBall('qxc', ${i}, '${n}', this)">${n}</div>`;
+                const rowStyle = i===6 ? 'background:var(--highlight-bg); border-radius:4px;' : '';
+                html += `<div class="qxc-row" style="${rowStyle}"><div class="qxc-label">${posNames[i]}</div><div class="qxc-balls">${ballsHtml}</div></div>`;
             }
+            container.innerHTML = html;
+        } else {
+            const redCount = type === 'ssq' ? 33 : 35; const blueCount = type === 'ssq' ? 16 : 12;
+            const redLabel = type === 'dlt' ? '前区 (红球)' : '红球区'; const blueLabel = type === 'dlt' ? '后区 (蓝球)' : '蓝球区';
+            let html = `<div class="picker-section-title text-danger">${redLabel}</div><div class="ball-container mb-3">`;
+            for(let i=1; i<=redCount; i++) html += `<div class="ball" onclick="toggleBall('red', 0, '${i.toString().padStart(2,'0')}', this)">${i.toString().padStart(2,'0')}</div>`;
+            html += `</div><div class="picker-section-title text-primary">${blueLabel}</div><div class="ball-container">`;
+            for(let i=1; i<=blueCount; i++) html += `<div class="ball" onclick="toggleBall('blue', 0, '${i.toString().padStart(2,'0')}', this)">${i.toString().padStart(2,'0')}</div>`;
+            html += `</div>`;
+            container.innerHTML = html;
         }
-        let html = '';
-        redPart.forEach(n => {
-            if (!n) return;
-            const isHit = winData.hit_red.includes(n);
-            const cls = isHit ? 'b-red' : 'b-miss'; 
-            html += `<span class="ball ${cls}">${n}</span>`;
-        });
-        if (bluePart.length > 0) {
-            html += `<span class="mx-1 text-muted">+</span>`;
-            bluePart.forEach(n => {
-                if (!n) return;
-                const isHit = winData.hit_blue.includes(n);
-                const cls = isHit ? 'b-blue' : 'b-miss'; 
-                html += `<span class="ball ${cls}">${n}</span>`;
-            });
-        }
-        return html;
     }
+
+    function toggleBall(ct, ri, n, el) {
+        let ac = (ct === 'red' || (ct === 'qxc' && ri < 6)) ? 'active-red' : 'active-blue'; if (currentType === '7xc' && ri === 6) ac = 'active-blue';
+        if (currentType === '7xc') {
+            const idx = selectedBalls.qxc[ri].indexOf(n);
+            if (idx > -1) { selectedBalls.qxc[ri].splice(idx, 1); el.classList.remove(ac); }
+            else { selectedBalls.qxc[ri].push(n); selectedBalls.qxc[ri].sort((a,b)=>Number(a)-Number(b)); el.classList.add(ac); }
+        } else {
+            const list = selectedBalls[ct]; const idx = list.indexOf(n);
+            if (idx > -1) { list.splice(idx, 1); el.classList.remove(ac); }
+            else { list.push(n); list.sort(); el.classList.add(ac); }
+        }
+        updatePreviewText();
+    }
+    function updatePreviewText(){
+        let t=''; if(currentType==='7xc'){ let p=[]; for(let i=0;i<7;i++) p.push(selectedBalls.qxc[i].length?selectedBalls.qxc[i].join(','):'?'); t=p.join(' '); }
+        else { t=`${selectedBalls.red.join(' ')}${selectedBalls.blue.length?' + '+selectedBalls.blue.join(' '):''}`; }
+        document.getElementById('current-pick-text').innerText=t;
+    }
+    function addCurrentPickToList(){
+        const p=document.getElementById('current-pick-text').innerText.trim(); if(!p||p.includes('?')) return alert("号码不完整");
+        const ta=document.getElementById('bet-nums'); ta.value=ta.value.trim()?(ta.value.trim()+'\n'+p):p; ta.scrollTop=ta.scrollHeight;
+        document.querySelectorAll('.ball').forEach(b=>b.classList.remove('active-red','active-blue')); selectedBalls={red:[],blue:[],qxc:[[],[],[],[],[],[],[]]}; document.getElementById('current-pick-text').innerText='';
+    }
+    
+    function clearImagePreview() {
+        document.getElementById('ocr-preview-img').src = ''; document.getElementById('ocr-preview-img').style.display = 'none';
+        document.getElementById('clear-img-btn').style.display = 'none'; document.getElementById('ocr-placeholder').style.display = 'block';
+        document.getElementById('file-input').value = ''; document.getElementById('camera-input').value = '';
+    }
+    function clearAll() { document.getElementById('bet-nums').value = ''; document.getElementById('check-results').innerHTML = ''; clearImagePreview(); document.querySelectorAll('.ball').forEach(b => b.classList.remove('active-red', 'active-blue')); selectedBalls = { red: [], blue: [], qxc: [[],[],[],[],[],[],[]] }; document.getElementById('current-pick-text').innerText = ''; }
+
+    function resetAndLoadHistory(year) { 
+        historyState = { offset: 0, limit: 20, year: year, issue: 'all', isLoading: false, hasMore: true }; 
+        document.getElementById('history-list').innerHTML = ''; 
+        const issueSel = document.getElementById('filter-history-issue');
+        const all = globalData[currentType].all_issues;
+        let filtered = all;
+        if (year !== 'all') filtered = all.filter(i => i.date.startsWith(year));
+        issueSel.innerHTML = '<option value="all">所有期数</option>' + filtered.map(i => `<option value="${i.issue}">${i.issue}期</option>`).join('');
+        issueSel.value = 'all';
+        loadMoreHistory(); 
+    }
+    function filterHistoryByIssue(issue) {
+        historyState = { offset: 0, limit: 1, year: 'all', issue: issue, isLoading: false, hasMore: false };
+        document.getElementById('history-list').innerHTML = '';
+        loadMoreHistory();
+    }
+    async function loadMoreHistory() {
+        if (historyState.isLoading || (!historyState.hasMore && historyState.issue === 'all')) return;
+        historyState.isLoading = true; document.getElementById('history-loading').style.display = 'block';
+        try {
+            const resp = await fetch('/api/history_list', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ type: currentType, year: historyState.year, issue: historyState.issue, offset: historyState.offset, limit: historyState.limit }) });
+            const data = await resp.json();
+            if (data.success && data.data.length > 0) {
+                renderHistoryAppend(data.data); historyState.offset += data.data.length;
+                if (data.data.length < historyState.limit) historyState.hasMore = false;
+            } else historyState.hasMore = false;
+        } catch(e) { console.error(e); } finally { historyState.isLoading = false; document.getElementById('history-loading').style.display = 'none'; }
+    }
+    
+    function renderHistoryAppend(list) {
+        const h = list.map(row => {
+            const rArr = row.red.split(' '); const bArr = row.blue ? row.blue.split(' ') : [];
+            const ballHtml = rArr.map(n => `<span class="static-ball sb-red">${n}</span>`).join('') + bArr.map(n => `<span class="static-ball sb-blue">${n}</span>`).join('');
+            let prizes = ''; 
+            try{ 
+                const p=JSON.parse(row.prizes); 
+                if(p.length) prizes=`<div class="mt-2"><table class="table table-sm table-bordered text-center small mb-0" style="color:var(--text-main); border-color:var(--border-color);"><thead style="background-color:var(--table-head-bg);"><tr><th>奖项</th><th>注数</th><th>奖金</th></tr></thead><tbody>`+p.map(x=>`<tr><td>${x.n}</td><td>${x.c}</td><td class="text-danger fw-bold">${x.m}</td></tr>`).join('')+`</tbody></table></div>`; 
+            }catch(e){}
+            return `<div class="accordion-item" style="background:transparent;"><h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#h-${row.issue}" style="background:var(--bg-card); color:var(--text-main);"><div class="w-100"><div class="d-flex justify-content-between small mb-1" style="color:var(--text-sub);"><span>第 ${row.issue} 期</span><span>${row.date}</span></div><div>${ballHtml}</div></div></button></h2><div id="h-${row.issue}" class="accordion-collapse collapse" data-bs-parent="#history-list"><div class="accordion-body p-2" style="background:var(--bg-body); color:var(--text-main);">${prizes}</div></div></div>`;
+        }).join('');
+        document.getElementById('history-list').insertAdjacentHTML('beforeend', h);
+    }
+
+    function initCrop(el) { const f=el.files[0]; if(!f)return; const r=new FileReader(); r.onload=(e)=>{ document.getElementById('image-to-crop').src=e.target.result; cropModal.show(); document.getElementById('crop-confirm-btn').disabled=false; document.getElementById('crop-confirm-btn').innerText="开始识别"; setTimeout(()=>{if(cropper)cropper.destroy();cropper=new Cropper(document.getElementById('image-to-crop'),{viewMode:1,dragMode:'move',autoCropArea:0.9})},200); }; r.readAsDataURL(f); }
+    function rotateImage(v,abs){ if(cropper) abs?cropper.rotateTo(parseInt(v)):cropper.rotate(parseInt(v)); }
+    function performCropAndUpload() { if(!cropper)return; const btn=document.getElementById('crop-confirm-btn'); btn.disabled=true; btn.innerText="处理中..."; cropper.getCroppedCanvas({maxWidth:2048,maxHeight:2048,fillColor:'#fff'}).toBlob((blob)=>{const url=URL.createObjectURL(blob);document.getElementById('ocr-preview-img').src=url;document.getElementById('ocr-preview-img').style.display='block';document.getElementById('ocr-placeholder').style.display='none';document.getElementById('clear-img-btn').style.display='block';cropModal.hide();uploadBlob(blob)},'image/jpeg',0.85); }
+    async function uploadBlob(blob){ const fd=new FormData(); fd.append('file',blob,'ocr.jpg'); fd.append('type',currentType); try{ const r=await fetch('/api/ocr',{method:'POST',body:fd}); const d=await r.json(); if(d.success){const ta=document.getElementById('bet-nums');ta.value=ta.value.trim()?(ta.value.trim()+'\n'+d.lines.join('\n')):d.lines.join('\n');document.querySelectorAll('.ball').forEach(b=>b.classList.remove('active-red','active-blue'));}else alert(d.message); }catch(e){alert(e.message);} }
+    function startDualTimer(st,dt){ clearInterval(timerInt); const cf=(t)=>{const d=new Date(t)-new Date();if(d<0)return "已结束";return `${Math.floor(d/86400000)}天 ${Math.floor((d%86400000)/3600000)}时 ${Math.floor((d%3600000)/60000)}分 ${Math.floor((d%60000)/1000)}秒`}; timerInt=setInterval(()=>{document.getElementById('cd-stop').innerText=cf(new Date(st));document.getElementById('cd-draw').innerText=cf(new Date(dt))},1000); }
+    function syncPickerFromText(){document.querySelectorAll('.ball').forEach(b=>b.classList.remove('active-red','active-blue')); selectedBalls={red:[],blue:[],qxc:[[],[],[],[],[],[],[]]};}
 
     async function doCheck(mode) {
-        const raw = document.getElementById('bet-nums').value.trim();
-        if (!raw) return alert("请输入号码");
-        const resDiv = document.getElementById('check-results');
-        resDiv.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div> 计算中...</div>';
-        const bets = raw.split('\n').map(s => ({nums: s})).filter(x => x.nums);
+        const raw = document.getElementById('bet-nums').value.trim(); if (!raw) return alert("请输入号码");
+        const resDiv = document.getElementById('check-results'); resDiv.innerHTML = '<div class="p-3 text-center text-secondary"><div class="spinner-border spinner-border-sm"></div> 计算中...</div>';
+        const bets = raw.split('\n').map(s=>({nums:s})).filter(x=>x.nums);
         try {
-            const resp = await fetch('/api/check', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    type: currentType, mode: mode,
-                    issue: document.getElementById('issue-sel').value,
-                    zhuijia: document.getElementById('zj-chk').checked, bets: bets
-                })
-            });
+            const resp = await fetch('/api/check', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ type:currentType, mode:mode, issue:document.getElementById('issue-sel').value, zhuijia:document.getElementById('zj-chk').checked, bets:bets }) });
             const data = await resp.json();
-            if (data.length === 0) { resDiv.innerHTML = '<div class="alert alert-warning m-3">未查询到中奖信息</div>'; return; }
+            if(!Array.isArray(data)) throw new Error(data.message||"Error");
+            if(data.length===0) { resDiv.innerHTML='<div class="p-3 text-center text-muted">未中奖</div>'; return; }
             let html = '';
             data.forEach(item => {
-                html += `<div class="p-3 border-bottom bg-white">`;
-                if (item.matches.length === 0) {
-                    html += `<div class="d-flex justify-content-between"><div class="fw-bold text-muted">${item.bet}</div><span class="badge bg-light text-secondary border align-self-center">未中奖</span></div>`;
-                } else {
+                let matchesHtml = '';
+                if(item.matches.length === 0) matchesHtml = `<div class="text-secondary small">未中奖</div>`;
+                else {
                     item.matches.forEach(m => {
-                        const winInfo = m.win_data;
-                        const highlightedBalls = renderUserBalls(item.bet, winInfo, currentType);
-                        let winStr = '';
-                        for(let k in winInfo.details) { winStr += `<span class="badge bg-danger me-1">${k} x${winInfo.details[k].count}</span> `; }
-                        html += `<div class="mt-2 p-2 rounded" style="background-color: #fff8e1; border: 1px solid #ffe0b2;"><div class="d-flex justify-content-between align-items-center mb-2"><span class="badge bg-secondary">${m.issue}期</span><span class="text-danger fw-bold fs-5">¥${winInfo.total_money.toLocaleString()}</span></div><div class="mb-2"><small class="text-muted d-block mb-1">您的号码 (高亮为命中):</small><div>${highlightedBalls}</div></div><div class="border-top pt-2 mt-2">${winStr}</div></div>`;
+                        const drawR = m.draw_red.split(' ').map(n=>`<span class="static-ball sb-red">${n}</span>`).join('');
+                        const drawB = m.draw_blue ? m.draw_blue.split(' ').map(n=>`<span class="static-ball sb-blue">${n}</span>`).join('') : '';
+                        const drawBalls = `<div class="result-draw-balls d-flex align-items-center mb-1"><span class="small me-2" style="color:var(--text-sub)">开奖:</span>${drawR}${drawB}</div>`;
+                        
+                        let titleHtml = '';
+                        if (m.win_data.is_win) {
+                            titleHtml = `<span class="text-danger fw-bold">¥${m.win_data.total_money.toLocaleString()}</span> <span class="badge bg-warning text-dark">${m.win_data.total_money_cn||''}</span>`;
+                        } else {
+                            titleHtml = `<span class="badge bg-secondary">未中奖</span>`;
+                        }
+                        let balls = `<div class="mb-1 small">第${m.issue}期 <span class="text-secondary">(${m.date})</span>: ${titleHtml}</div>`;
+                        
+                        let details = ''; 
+                        if(m.win_data.is_win) {
+                            for(let k in m.win_data.details) details += `<span class="badge bg-danger me-1">${k} x${m.win_data.details[k].count}</span>`;
+                        }
+
+                        let userBalls = '';
+                        let rp=[], bp=[]; 
+                        const betStr = item.bet.replace(/[,，]/g, ' ').trim();
+                        if (currentType === '7xc') { rp = betStr.split(/\s+/); } 
+                        else {
+                            if (item.bet.includes('+')) { const parts = item.bet.split('+'); rp = parts[0].replace(/[,，]/g, ' ').trim().split(/\s+/); bp = parts[1].replace(/[,，]/g, ' ').trim().split(/\s+/); } 
+                            else { const all = betStr.split(/\s+/); if(currentType==='ssq'){ rp = all.slice(0, all.length-1); bp = all.slice(all.length-1); } else { rp = all.slice(0, all.length-2); bp = all.slice(all.length-2); } }
+                        }
+                        userBalls = '<div class="mb-2">';
+                        rp.forEach(n => { userBalls += `<span class="ball ${m.win_data.hit_red.includes(n) ? 'active-red' : ''}">${n}</span>`; });
+                        if (bp.length > 0) { userBalls += ' <span class="text-muted small">+</span> '; bp.forEach(n => { userBalls += `<span class="ball ${m.win_data.hit_blue.includes(n) ? 'active-blue' : ''}">${n}</span>`; }); }
+                        userBalls += '</div>';
+
+                        matchesHtml += `<div class="p-2 rounded mb-2 border" style="background-color:var(--highlight-bg); border-color:var(--highlight-border);">${balls}${drawBalls}<hr class="my-2" style="border-style:dashed; opacity:0.3;">${userBalls}${details}</div>`;
                     });
                 }
-                html += `</div>`;
+                html += `<div class="p-3 border-bottom" style="border-color:var(--border-color)!important">${matchesHtml}</div>`;
             });
             resDiv.innerHTML = html;
-        } catch (e) { resDiv.innerHTML = '<div class="text-danger p-3">查询出错: ' + e.message + '</div>'; }
+        } catch(e) { resDiv.innerHTML = `<div class="p-3 text-danger">${e.message}</div>`; }
     }
 </script>
 </body>
